@@ -60,16 +60,13 @@ mowen/
 │   ├── model.py                   # MOWEN hybrid architecture
 │   ├── pretrain.py                # Pretraining pipeline for MAE (internal use)
 │   ├── fine_tune.py               # Fine-tuning pipeline
-│   ├── data_processing.py         # Utilities for data preprocessing and patching
 │   ├── utils.py                   # Helper functions
 │   └── weights/                   # Pre-trained model weights
 │       └── mowen_pretrained.pth   # Example pre-trained weights file
 ├── examples/                      # Example scripts
-│   ├── pretrain_example.py        # Pretraining example
 │   ├── fine_tune_example.py       # Fine-tuning example
 │   ├── evaluate.py                # Evaluation example
 │   └── config.yaml                # Configuration for experiments
-├── data/                          # Placeholder for datasets (ignored by Git)
 ├── tests/                         # Unit and integration tests
 ├── scripts/                       # Utility scripts
 ├── requirements.txt               # Python dependencies
