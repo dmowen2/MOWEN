@@ -46,21 +46,10 @@ class MOWEN(nn.Module):
         self.mask_ratio = mask_ratio  # Percentage of patches to mask
 
     def forward(self, x, pretrain=False):
-        # Step 1: Extract features using CNN
-        cnn_features = self.cnn(x)  # Output: (B, 2048, 14, 14)
-
-        # Debugging: Print feature map shape
-        print("CNN Feature Map Size:", cnn_features.shape)
-
-        # Step 2: Prepare patches for ViT
-        patches = self.prepare_patches(cnn_features)  # Output: (B, 196, 768)
-
-        # Debugging: Print patches shape before ViT
-        print("Patches Shape Before ViT:", patches.shape)
-
-        # Step 3: Encode with ViT
-        encoded_patches = self.vit.blocks(patches)  # Output: (B, 196, 768)
-
+        cnn_features = self.cnn(x)  # (B, 2048, 14, 14)
+        patches = self.prepare_patches(cnn_features)  # (B, 196, 768)
+        encoded_patches = self.vit.blocks(patches)  # (B, 196, 768)
+    
         if pretrain:
             # Mask patches and reconstruct (MAE)
             masked_patches = self.mask_patches(encoded_patches)

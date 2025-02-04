@@ -2,12 +2,12 @@
 #SBATCH --job-name=mowen-pretrain
 #SBATCH --output=/work/zzv393/MOWEN/logs/mowen_output_%j_%A.txt
 #SBATCH --error=/work/zzv393/MOWEN/logs/mowen_error_%j_%A.txt
-#SBATCH --partition=gpu4v100  # Use gpu4v100 partition
-#SBATCH --gres=gpu:4  # Request 4 GPUs
-#SBATCH --ntasks=4  # Match number of GPUs
-#SBATCH --cpus-per-task=8  # Allocate 8 CPU cores per task
+#SBATCH --partition=gpu2v100
+#SBATCH --gres=gpu:2
+#SBATCH --ntasks=2
+#SBATCH --cpus-per-task=8
 #SBATCH --time=72:00:00
-#SBATCH --exclusive  # Ensure full node access
+#SBATCH --exclusive
 
 # Load required modules
 module load anaconda3
@@ -29,7 +29,7 @@ export MASTER_PORT=$((29500 + RANDOM % 100))
 mkdir -p /work/zzv393/MOWEN/logs
 
 # Run distributed training
-srun torchrun --nproc_per_node=4 --nnodes=1 \  # Use all 4 GPUs
+srun torchrun --nproc_per_node=2 --nnodes=1 \
     --rdzv_id=$SLURM_JOB_ID --rdzv_backend=c10d \
     --rdzv_endpoint=localhost:$MASTER_PORT \
     /work/zzv393/MOWEN/mowen/pretrain.py

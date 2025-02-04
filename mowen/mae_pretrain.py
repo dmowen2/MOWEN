@@ -14,9 +14,9 @@ from model import MOWEN  # Importing your model
 
 # Configuration
 IMG_SIZE = 224
-BATCH_SIZE = 64  # Adjusted for multi-GPU
+BATCH_SIZE = 128  # Adjusted for multi-GPU
 EPOCHS = 50
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1.4e-4
 MASK_RATIO = 0.75
 CHECKPOINT_DIR = "checkpoints/"
 METRICS_PATH = "metrics/training_log.csv"
@@ -35,8 +35,8 @@ def get_data_loaders():
         transforms.Normalize(mean=[0.5], std=[0.5]),
     ])
 
-    train_dataset = ImageFolder(root="D:/mowen-dataset/train", transform=transform)
-    val_dataset = ImageFolder(root="D:/mowen-dataset/val", transform=transform)
+    train_dataset = ImageFolder(root="/work/zzv393/mowen-dataset/train", transform=transform)
+    val_dataset = ImageFolder(root="/work/zzv393/mowen-dataset/val", transform=transform)
 
     train_sampler = DistributedSampler(train_dataset)  # Distributed sampling
     val_sampler = DistributedSampler(val_dataset)
@@ -58,10 +58,10 @@ def train_one_epoch(model, dataloader, optimizer, criterion, scaler, epoch):
         optimizer.zero_grad()
 
         with autocast():  # Enable mixed precision
-            reconstructed = model(images, pretrain=True)
-            cnn_features = model.cnn(images)  # Extract CNN features
-            image_patches = model.prepare_patches(cnn_features)  # Convert to patch format
-            loss = criterion(reconstructed, image_patches)
+            outputs = model(images, pretrain=True)  # ? Use `outputs`, not `reconstructed`
+            cnn_features = model.module.cnn(images)  # Extract CNN features
+            image_patches = model.module.prepare_patches(cnn_features)  # Convert to patch format
+            loss = criterion(outputs, image_patches)  # ? Fix the variable name
 
         scaler.scale(loss).backward()  # Scaled backprop
         scaler.step(optimizer)
@@ -71,13 +71,13 @@ def train_one_epoch(model, dataloader, optimizer, criterion, scaler, epoch):
 
         # Save sample reconstructions for debugging
         if batch_idx == 0 and dist.get_rank() == 0:  # Save only one batch per epoch
-            torch.save(reconstructed[:4], f"metrics/reconstructed_epoch{epoch+1}.pth")
+            torch.save(outputs[:4], f"metrics/reconstructed_epoch{epoch+1}.pth")  # ? Use `outputs`, not `reconstructed`
 
     epoch_loss = running_loss / len(dataloader)
     print(f"Epoch {epoch+1} Training Loss: {epoch_loss:.4f}")
     return epoch_loss
 
-# Validation Loop
+
 def validate_one_epoch(model, dataloader, criterion):
     model.eval()
     val_loss = 0.0
@@ -87,16 +87,17 @@ def validate_one_epoch(model, dataloader, criterion):
             images = images.to(DEVICE)
 
             with autocast():
-                reconstructed = model(images, pretrain=True)
-                cnn_features = model.cnn(images)  # Extract CNN features
-                image_patches = model.prepare_patches(cnn_features)  # Convert to patch format
-                loss = criterion(reconstructed, image_patches)
+                outputs = model(images, pretrain=True)  # ? Use `outputs` instead of `reconstructed`
+                cnn_features = model.module.cnn(images)  # Extract CNN features
+                image_patches = model.module.prepare_patches(cnn_features)  # Convert to patch format
+                loss = criterion(outputs, image_patches)  # ? Use `outputs`
 
             val_loss += loss.item()
 
     val_loss /= len(dataloader)
     print(f"Validation Loss: {val_loss:.4f}")
     return val_loss
+
 
 # Main Pretraining Function
 def main():
@@ -109,7 +110,9 @@ def main():
 
     # Initialize model
     model = MOWEN(img_size=IMG_SIZE, mask_ratio=MASK_RATIO).to(DEVICE)
-    model = DDP(model)  # Multi-GPU training
+    model = DDP(model, find_unused_parameters=True)
+
+
 
     # Loss and optimizer
     criterion = nn.MSELoss()
